@@ -1,0 +1,24 @@
+appId: org.tasks
+tags:
+  - smoke
+  - onboarding
+---
+# Verifies the first-run onboarding flow and landing on the main task list.
+
+- launchApp:
+    clearState: true
+
+- assertVisible: "Add account"
+- assertVisible: "Continue without sync"
+- assertVisible: "Import Tasks.org backup"
+
+- takeScreenshot: screenshots/01_onboarding_welcome
+
+- tapOn: "Continue without sync"
+
+- assertVisible: "My Tasks"
+- assertVisible: "There are no tasks here."
+- assertVisible:
+    id: "org.tasks:id/fab"
+
+- takeScreenshot: screenshots/01_onboarding_main_empty

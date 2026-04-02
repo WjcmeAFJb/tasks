@@ -1,0 +1,37 @@
+appId: org.tasks
+tags:
+  - smoke
+  - crud
+---
+# Creates two tasks and verifies they appear in the task list.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# --- Create first task ---
+- tapOn:
+    id: "org.tasks:id/fab"
+
+- assertVisible: "Task name"
+- tapOn: "Task name"
+- inputText: "Buy groceries for dinner"
+
+- takeScreenshot: screenshots/02_create_task_editing
+
+- tapOn: "Save"
+
+- assertVisible: "Buy groceries for dinner"
+
+# --- Create second task ---
+- tapOn:
+    id: "org.tasks:id/fab"
+
+- tapOn: "Task name"
+- inputText: "Review pull request"
+- tapOn: "Save"
+
+- assertVisible: "Buy groceries for dinner"
+- assertVisible: "Review pull request"
+
+- takeScreenshot: screenshots/02_create_task_list

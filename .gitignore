@@ -14,3 +14,8 @@ Thumbs.db
 /fastlane/report.xml
 /compose-metrics/
 .DS_Store
+
+# Maestro test results (regenerated on each run)
+maestro/results/
+maestro/screenshots/
+screenshots/

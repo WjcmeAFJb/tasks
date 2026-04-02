@@ -1,0 +1,43 @@
+appId: org.tasks
+tags:
+  - search
+---
+# Creates tasks and uses search to filter them.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# Create a few tasks
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Buy milk"
+- tapOn: "Save"
+
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Write report"
+- tapOn: "Save"
+
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Buy bread"
+- tapOn: "Save"
+
+- assertVisible: "Buy milk"
+- assertVisible: "Write report"
+- assertVisible: "Buy bread"
+
+# Tap the search button in the bottom bar
+- tapOn: "Search"
+
+- inputText: "Buy"
+
+- takeScreenshot: screenshots/08_search_results
+
+# Both "Buy" tasks should be visible, "Write report" should not
+- assertVisible: "Buy milk"
+- assertVisible: "Buy bread"

@@ -1,0 +1,57 @@
+appId: org.tasks
+tags:
+  - smoke
+  - settings
+---
+# Navigates to Settings and verifies all major sections are present.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# Tap the gear/settings icon (top-right "More options")
+- tapOn: "More options"
+
+# A tooltip "App settings" appears
+- tapOn: "App settings"
+
+- assertVisible: "Settings"
+- assertVisible: "Donate"
+- assertVisible: "Local lists"
+- assertVisible: "Add account"
+- assertVisible: "Look and feel"
+- assertVisible: "Notifications"
+- assertVisible: "Task defaults"
+- assertVisible: "Task list options"
+
+- takeScreenshot: screenshots/06_settings_top
+
+# Scroll down to see more settings
+- scrollUntilVisible:
+    element: "About"
+    direction: DOWN
+
+- assertVisible: "Edit screen options"
+- assertVisible: "Date and time"
+- assertVisible: "Navigation drawer"
+- assertVisible: "Backups"
+- assertVisible: "Advanced"
+- assertVisible: "About"
+
+- takeScreenshot: screenshots/06_settings_bottom
+
+# Enter "Look and feel" and verify sub-settings
+- swipe:
+    direction: DOWN
+    duration: 400
+- tapOn: "Look and feel"
+
+- assertVisible: "Theme"
+- assertVisible: "Color"
+- assertVisible: "Launcher icon"
+
+- takeScreenshot: screenshots/06_settings_look_and_feel
+
+# Go back to settings
+- back
+- assertVisible: "Settings"

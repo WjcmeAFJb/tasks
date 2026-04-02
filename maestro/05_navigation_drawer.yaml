@@ -1,0 +1,47 @@
+appId: org.tasks
+tags:
+  - smoke
+  - navigation
+---
+# Opens the navigation drawer and switches between filters.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# Create a task so lists aren't all empty
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Navigation test task"
+- tapOn: "Save"
+- assertVisible: "Navigation test task"
+
+# Open navigation drawer via the hamburger button (bottom-left)
+- tapOn:
+    point: "10%,93%"
+
+- assertVisible: "My Tasks"
+- assertVisible: "Filters"
+- assertVisible: "Today"
+- assertVisible: "Recently modified"
+- assertVisible: "Tags"
+- assertVisible: "Places"
+- assertVisible: "Default list"
+
+- takeScreenshot: screenshots/05_nav_drawer_open
+
+# Navigate to "Today" filter
+- tapOn: "Today"
+- assertVisible: "Today"
+
+- takeScreenshot: screenshots/05_nav_today
+
+# Open drawer again and go to "Recently modified"
+- tapOn:
+    point: "10%,93%"
+- tapOn: "Recently modified"
+- assertVisible: "Recently modified"
+- assertVisible: "Navigation test task"
+
+- takeScreenshot: screenshots/05_nav_recently_modified

@@ -1,0 +1,42 @@
+appId: org.tasks
+tags:
+  - crud
+  - subtasks
+---
+# Creates a parent task, adds a subtask, and verifies hierarchy.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# Create parent task
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Parent task"
+- tapOn: "Save"
+- assertVisible: "Parent task"
+
+# Open the parent task to add a subtask
+- tapOn: "Parent task"
+
+# Scroll down to find "Add subtask"
+- scrollUntilVisible:
+    element: "Add subtask"
+    direction: DOWN
+
+- tapOn: "Add subtask"
+
+# Type subtask name in the inline editor
+- inputText: "Child subtask"
+
+- takeScreenshot: screenshots/07_subtask_editing
+
+# Save the parent (which saves the subtask too)
+- tapOn: "Save"
+
+# Both should be visible in the list
+- assertVisible: "Parent task"
+- assertVisible: "Child subtask"
+
+- takeScreenshot: screenshots/07_subtask_list

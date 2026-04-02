@@ -1,0 +1,35 @@
+appId: org.tasks
+tags:
+  - smoke
+  - crud
+---
+# Creates a task, edits its title, and verifies the change.
+
+- launchApp:
+    clearState: true
+- tapOn: "Continue without sync"
+
+# Create a task
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Original title"
+- tapOn: "Save"
+- assertVisible: "Original title"
+
+# Tap on the task to open it for editing
+- tapOn: "Original title"
+
+# Clear existing text and type new title
+- tapOn: "Original title"
+- eraseText: 14
+- inputText: "Updated title"
+
+- takeScreenshot: screenshots/03_edit_task_editing
+
+- tapOn: "Save"
+
+- assertVisible: "Updated title"
+- assertNotVisible: "Original title"
+
+- takeScreenshot: screenshots/03_edit_task_done
