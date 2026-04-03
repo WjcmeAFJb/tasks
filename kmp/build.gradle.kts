@@ -124,6 +124,13 @@ android {
         buildConfigField("String", "DEV_URL", "\"${tasks_dev_url ?: ""}\"")
     }
 
+    buildTypes {
+        debug {
+            enableUnitTestCoverage = project.hasProperty("coverage")
+            enableAndroidTestCoverage = project.hasProperty("coverage")
+        }
+    }
+
     compileOptions {
         isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17

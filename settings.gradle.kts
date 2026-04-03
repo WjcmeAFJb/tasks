@@ -50,3 +50,10 @@ include(":icons")
 include(":wear")
 include(":wear-datalayer")
 include(":composeApp")
+
+// For coverage builds, swap :icons with a stub that JaCoCo can instrument.
+// The real icons module's OutlinedGoogleMaterial$Icon enum has 3249 entries
+// whose <clinit> exceeds 64KB after JaCoCo probe insertion.
+if (providers.gradleProperty("coverage").isPresent) {
+    project(":icons").projectDir = file("icons-stub")
+}

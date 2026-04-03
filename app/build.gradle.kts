@@ -92,6 +92,7 @@ android {
             resValue("string", "google_key", tasks_google_key_debug ?: "")
             resValue("string", "posthog_key", "")
             enableUnitTestCoverage = project.hasProperty("coverage")
+            enableAndroidTestCoverage = project.hasProperty("coverage")
         }
         release {
             val tasks_mapbox_key: String? by project
@@ -288,27 +289,19 @@ dependencies {
 }
 
 // ---------------------------------------------------------------------------
-// JaCoCo coverage report — merges unit + E2E execution data.
+// JaCoCo coverage report — merges unit + instrumented + E2E execution data.
 //
-// Unit tests:
-//   ./gradlew -Pcoverage testGenericDebugUnitTest jacocoReport
+//   ./gradlew -Pcoverage :app:testGenericDebugUnitTest :app:jacocoReport
+//   ./gradlew -Pcoverage :app:connectedGenericDebugAndroidTest :app:jacocoReport
 //
-// E2E (Maestro) coverage:
-//   1. ./gradlew -Pcoverage assembleGenericDebug
-//   2. adb install app/build/outputs/apk/generic/debug/app-generic-debug.apk
-//   3. Run Maestro flows (maestro/run-all.sh)
-//   4. adb shell am broadcast -a org.tasks.DUMP_COVERAGE
-//   5. adb pull /data/data/org.tasks/files/coverage.ec app/build/jacoco/e2e.ec
-//   6. ./gradlew -Pcoverage jacocoReport
-//
-// Reports land in app/build/reports/jacoco/
+// Reports land in app/build/reports/jacoco/jacocoReport/
 // ---------------------------------------------------------------------------
 if (project.hasProperty("coverage")) {
     apply(plugin = "jacoco")
 
     tasks.register<JacocoReport>("jacocoReport") {
         group = "Verification"
-        description = "Generates merged JaCoCo coverage report (unit + E2E)."
+        description = "Generates merged JaCoCo coverage report (unit + instrumented)."
 
         reports {
             html.required.set(true)
@@ -316,38 +309,47 @@ if (project.hasProperty("coverage")) {
             csv.required.set(false)
         }
 
-        val kotlinClasses = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/genericDebug")
-        val javaClasses = fileTree("${layout.buildDirectory.get()}/intermediates/javac/genericDebug")
         val classExcludes = listOf(
             "**/R.class", "**/R\$*.class",
             "**/BuildConfig.*",
             "**/Manifest*.*",
-            "**/*_Hilt*.*",
-            "**/Hilt_*.*",
-            "**/*_Factory.*",
-            "**/*_MembersInjector.*",
-            "**/*Directions*.*",
-            "**/*Args*.*",
             "**/databinding/**",
-            "**/generated/**",
         )
+
+        // Use the same class directories that AGP's JaCoCo instrumentation uses.
+        // App: post-ASM-transform classes (class IDs match the instrumented APK).
+        // KMP/Data: bundled runtime classes (consumed by app's JaCoCo transform).
+        val appClasses = fileTree(
+            "${layout.buildDirectory.get()}/intermediates/classes/genericDebug/transformGenericDebugClassesWithAsm/dirs"
+        )
+        val kmpClasses = fileTree(
+            "${project(":kmp").layout.buildDirectory.get()}/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug"
+        )
+        val dataClasses = fileTree(
+            "${project(":data").layout.buildDirectory.get()}/intermediates/runtime_library_classes_dir/debug/bundleLibRuntimeToDirDebug"
+        )
+
         classDirectories.setFrom(
-            kotlinClasses.matching { exclude(classExcludes) },
-            javaClasses.matching { exclude(classExcludes) },
+            appClasses.matching { exclude(classExcludes) },
+            kmpClasses.matching { exclude(classExcludes) },
+            dataClasses.matching { exclude(classExcludes) },
         )
 
-        sourceDirectories.setFrom(
-            files("src/main/java", "src/generic/java")
-        )
+        sourceDirectories.setFrom(files(
+            "src/main/java",
+            "src/generic/java",
+            "${project(":kmp").projectDir}/src/commonMain/kotlin",
+            "${project(":kmp").projectDir}/src/jvmCommonMain/kotlin",
+            "${project(":kmp").projectDir}/src/androidMain/kotlin",
+            "${project(":data").projectDir}/src/commonMain/kotlin",
+            "${project(":data").projectDir}/src/androidMain/kotlin",
+        ))
 
-        // Collect .exec (unit tests), .ec (instrumented/E2E) files
+        // Collect .exec (unit tests) and .ec (instrumented/E2E) files
         executionData.setFrom(fileTree(layout.buildDirectory) {
             include(
-                // Unit test coverage
-                "outputs/unit_test_code_coverage/genericDebugUnitTest/*.exec",
-                // Instrumented test coverage
-                "outputs/code_coverage/connectedGenericDebugAndroidTest/**/*.ec",
-                // E2E (Maestro) coverage — pulled from device
+                "outputs/unit_test_code_coverage/**/*.exec",
+                "outputs/code_coverage/**/*.ec",
                 "jacoco/*.ec",
                 "jacoco/*.exec",
             )
