@@ -286,3 +286,71 @@ dependencies {
     testImplementation(libs.mockito.core)
     testImplementation(libs.xpp3)
 }
+
+// ---------------------------------------------------------------------------
+// JaCoCo coverage report — merges unit + E2E execution data.
+//
+// Unit tests:
+//   ./gradlew -Pcoverage testGenericDebugUnitTest jacocoReport
+//
+// E2E (Maestro) coverage:
+//   1. ./gradlew -Pcoverage assembleGenericDebug
+//   2. adb install app/build/outputs/apk/generic/debug/app-generic-debug.apk
+//   3. Run Maestro flows (maestro/run-all.sh)
+//   4. adb shell am broadcast -a org.tasks.DUMP_COVERAGE
+//   5. adb pull /data/data/org.tasks/files/coverage.ec app/build/jacoco/e2e.ec
+//   6. ./gradlew -Pcoverage jacocoReport
+//
+// Reports land in app/build/reports/jacoco/
+// ---------------------------------------------------------------------------
+if (project.hasProperty("coverage")) {
+    apply(plugin = "jacoco")
+
+    tasks.register<JacocoReport>("jacocoReport") {
+        group = "Verification"
+        description = "Generates merged JaCoCo coverage report (unit + E2E)."
+
+        reports {
+            html.required.set(true)
+            xml.required.set(true)
+            csv.required.set(false)
+        }
+
+        val kotlinClasses = fileTree("${layout.buildDirectory.get()}/tmp/kotlin-classes/genericDebug")
+        val javaClasses = fileTree("${layout.buildDirectory.get()}/intermediates/javac/genericDebug")
+        val classExcludes = listOf(
+            "**/R.class", "**/R\$*.class",
+            "**/BuildConfig.*",
+            "**/Manifest*.*",
+            "**/*_Hilt*.*",
+            "**/Hilt_*.*",
+            "**/*_Factory.*",
+            "**/*_MembersInjector.*",
+            "**/*Directions*.*",
+            "**/*Args*.*",
+            "**/databinding/**",
+            "**/generated/**",
+        )
+        classDirectories.setFrom(
+            kotlinClasses.matching { exclude(classExcludes) },
+            javaClasses.matching { exclude(classExcludes) },
+        )
+
+        sourceDirectories.setFrom(
+            files("src/main/java", "src/generic/java")
+        )
+
+        // Collect .exec (unit tests), .ec (instrumented/E2E) files
+        executionData.setFrom(fileTree(layout.buildDirectory) {
+            include(
+                // Unit test coverage
+                "outputs/unit_test_code_coverage/genericDebugUnitTest/*.exec",
+                // Instrumented test coverage
+                "outputs/code_coverage/connectedGenericDebugAndroidTest/**/*.ec",
+                // E2E (Maestro) coverage — pulled from device
+                "jacoco/*.ec",
+                "jacoco/*.exec",
+            )
+        })
+    }
+}
