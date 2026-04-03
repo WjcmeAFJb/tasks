@@ -354,3 +354,60 @@ if (project.hasProperty("coverage")) {
         })
     }
 }
+
+// ---------------------------------------------------------------------------
+// Mutation testing with PIT (pitest).
+//
+//   ./gradlew pitestMutationTesting
+//
+// PIT does not natively support Android modules, so this task runs PIT
+// as a Java process against the app's compiled Kotlin classes and unit tests.
+// Uses pitest-kotlin-plugin to filter out Kotlin compiler-generated mutations.
+//
+// Reports land in app/build/reports/pitest/
+// ---------------------------------------------------------------------------
+val pitestClasspath: Configuration by configurations.creating {
+    isCanBeResolved = true
+    isCanBeConsumed = false
+}
+dependencies {
+    pitestClasspath("org.pitest:pitest-command-line:1.17.4")
+    pitestClasspath("org.pitest:pitest:1.17.4")
+}
+
+tasks.register<JavaExec>("pitestMutationTesting") {
+    group = "Verification"
+    description = "Runs PIT mutation testing on app unit tests."
+    dependsOn("testGenericDebugUnitTest")
+
+    mainClass.set("org.pitest.mutationtest.commandline.MutationCoverageReport")
+    classpath = pitestClasspath
+
+    val testTask = tasks.named<Test>("testGenericDebugUnitTest")
+    val reportDir = layout.buildDirectory.dir("reports/pitest")
+
+    doFirst {
+        val buildDir = layout.buildDirectory.get().asFile.absolutePath
+        val appClasses = "$buildDir/tmp/kotlin-classes/genericDebug"
+        val testClasses = "$buildDir/intermediates/classes/genericDebugUnitTest/transformGenericDebugUnitTestClassesWithAsm/dirs"
+
+        // PIT classPath must include: app classes, test classes, and all deps
+        val cpEntries = mutableListOf(appClasses, testClasses)
+        testTask.get().classpath.files.forEach { cpEntries.add(it.absolutePath) }
+        val fullCp = cpEntries.joinToString(",")
+
+        args(
+            "--reportDir", reportDir.get().asFile.absolutePath,
+            "--sourceDirs", file("src/main/java").absolutePath + "," + file("src/generic/java").absolutePath,
+            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*",
+            "--targetTests", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
+            "--classPath", fullCp,
+            "--mutators", "STRONGER",
+            "--outputFormats", "HTML,XML",
+            "--timestampedReports", "false",
+            "--threads", "4",
+            "--timeoutConst", "8000",
+            "--verbose",
+        )
+    }
+}
