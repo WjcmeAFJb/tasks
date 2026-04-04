@@ -401,8 +401,9 @@ tasks.register<JavaExec>("pitestMutationTesting") {
         args(
             "--reportDir", reportDir.get().asFile.absolutePath,
             "--sourceDirs", file("src/main/java").absolutePath + "," + file("src/generic/java").absolutePath,
-            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*",
-            "--targetTests", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
+            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,org.tasks.data.entity.*,org.tasks.data.sql.*,org.tasks.security.*,org.tasks.sync.microsoft.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
+            "--excludedClasses", "*Test,*Tests,*Test$*,*Tests$*,*Maker*,*TestCase*,*TestUtilities*",
+            "--targetTests", "org.tasks.*,com.todoroo.*",
             "--classPath", fullCp,
             "--mutators", "STRONGER",
             "--outputFormats", "HTML,XML",
