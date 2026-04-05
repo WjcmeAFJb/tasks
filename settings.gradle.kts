@@ -51,8 +51,6 @@ include(":wear")
 include(":wear-datalayer")
 include(":composeApp")
 
-// Note: enableAndroidTestCoverage cannot be used because JaCoCo fails to
-// instrument the :icons module (OutlinedGoogleMaterial$Icon.<clinit> exceeds
-// 64KB after JaCoCo probe insertion, MethodTooLargeException). AGP provides
-// no per-class exclusion for the JaCoCo transform.
-// Instrumented test coverage uses the -Pcoverage flag with unit test data only.
+// The :icons module's OutlinedGoogleMaterial enum was split into OM1/OM3/OM4
+// (~1083 entries each) so JaCoCo can instrument them without exceeding
+// the 64KB JVM method limit for <clinit>.

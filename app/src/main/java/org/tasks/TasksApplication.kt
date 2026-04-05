@@ -35,6 +35,8 @@ import org.tasks.billing.Inventory
 import org.tasks.caldav.CaldavSynchronizer
 import org.tasks.icons.OutlinedGoogleMaterial
 import org.tasks.icons.OutlinedGoogleMaterial2
+import org.tasks.icons.OutlinedGoogleMaterial3
+import org.tasks.icons.OutlinedGoogleMaterial4
 import org.tasks.fcm.PushTokenManager
 import org.tasks.injection.InjectingJobIntentService
 import org.tasks.jobs.WorkManager
@@ -146,6 +148,8 @@ class TasksApplication : Application(), Configuration.Provider {
         tasksPreferences.set(TasksPreferences.syncSource, SyncSource.NONE.name)
         Iconics.registerFont(OutlinedGoogleMaterial)
         Iconics.registerFont(OutlinedGoogleMaterial2)
+        Iconics.registerFont(OutlinedGoogleMaterial3)
+        Iconics.registerFont(OutlinedGoogleMaterial4)
         inventory.updateTasksAccount()
         NotificationSchedulerIntentService.enqueueWork(context)
         workManager.get().apply {

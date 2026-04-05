@@ -127,6 +127,7 @@ android {
     buildTypes {
         debug {
             enableUnitTestCoverage = project.hasProperty("coverage")
+            enableAndroidTestCoverage = project.hasProperty("coverage")
         }
     }
 
