@@ -4,6 +4,7 @@ import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertSame
+import org.junit.Assert.assertTrue
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
@@ -62,6 +63,69 @@ class DaoExtensionsTest {
         val result = caldavDao.getOrCreateLocalAccount()
 
         assertSame(existing, result)
+    }
+
+    // --- CaldavDaoExtensions: getLocalAccount returns first when multiple ---
+
+    @Test
+    fun getLocalAccountReturnsFirstWhenMultipleExist() = runTest {
+        val first = CaldavAccount(id = 1, accountType = CaldavAccount.TYPE_LOCAL, uuid = "uuid-1")
+        val second = CaldavAccount(id = 2, accountType = CaldavAccount.TYPE_LOCAL, uuid = "uuid-2")
+        `when`(caldavDao.getAccounts(CaldavAccount.TYPE_LOCAL)).thenReturn(listOf(first, second))
+
+        val result = caldavDao.getLocalAccount()
+
+        assertSame(first, result)
+    }
+
+    // --- CaldavCalendar: readOnly with default access ---
+
+    @Test
+    fun calendarIsNotReadOnlyWhenDefaultAccess() {
+        val calendar = CaldavCalendar()
+        assertEquals(false, calendar.readOnly())
+    }
+
+    // --- CaldavCalendar: calendarUri with multiple trailing slashes ---
+
+    @Test
+    fun calendarUriWithMultiplePathSegments() {
+        val calendar = CaldavCalendar(url = "https://example.com/a/b/c/d/")
+        assertEquals("d", calendar.calendarUri)
+    }
+
+    // --- CaldavAccount: isLoggedOut ---
+
+    @Test
+    fun isLoggedOutWhenUnauthorized() {
+        val account = CaldavAccount(
+            accountType = CaldavAccount.TYPE_TASKS,
+            error = CaldavAccount.ERROR_UNAUTHORIZED,
+        )
+        assertTrue(account.isLoggedOut())
+    }
+
+    @Test
+    fun isNotLoggedOutWhenNoError() {
+        val account = CaldavAccount(accountType = CaldavAccount.TYPE_TASKS)
+        assertEquals(false, account.isLoggedOut())
+    }
+
+    // --- CaldavAccount: isPaymentRequired ---
+
+    @Test
+    fun isPaymentRequiredWhenPaymentError() {
+        val account = CaldavAccount(
+            accountType = CaldavAccount.TYPE_TASKS,
+            error = CaldavAccount.ERROR_PAYMENT_REQUIRED,
+        )
+        assertTrue(account.isPaymentRequired())
+    }
+
+    @Test
+    fun isNotPaymentRequiredWhenNoError() {
+        val account = CaldavAccount(accountType = CaldavAccount.TYPE_TASKS)
+        assertEquals(false, account.isPaymentRequired())
     }
 
     // --- TagDataDaoExtensions: sort with no order ---
