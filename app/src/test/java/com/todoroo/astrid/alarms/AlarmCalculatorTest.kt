@@ -2,6 +2,7 @@ package com.todoroo.astrid.alarms
 
 import com.natpryce.makeiteasy.MakeItEasy.with
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
@@ -396,6 +397,166 @@ class AlarmCalculatorTest {
 
             assertEquals(first, second)
         }
+    }
+
+    // --- Additional edge case tests ---
+
+    @Test
+    fun unknownAlarmTypeReturnsNull() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(DUE_TIME, now)),
+            Alarm(time = now.millis + 1000, type = 99) // unknown type
+        )
+        assertNull(alarm)
+    }
+
+    @Test
+    fun triggerExactlyEqualToReminderLastReturnsNull() {
+        // trigger must be > reminderLast, not >=
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(DUE_TIME, now), with(REMINDER_LAST, now)),
+            Alarm(time = 0, type = TYPE_REL_END)
+        )
+        assertNull(alarm)
+    }
+
+    @Test
+    fun triggerOneMillisAfterReminderLastReturnsNotification() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(REMINDER_LAST, now)),
+            Alarm(time = now.millis + 1, type = TYPE_DATE_TIME)
+        )
+        assertEquals(
+            Notification(timestamp = now.millis + 1, type = TYPE_DATE_TIME),
+            alarm
+        )
+    }
+
+    @Test
+    fun randomReminderWithZeroPeriodReturnsNull() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(CREATION_TIME, now)),
+            Alarm(time = 0, type = TYPE_RANDOM)
+        )
+        assertNull(alarm)
+    }
+
+    @Test
+    fun randomReminderWithNegativePeriodReturnsNull() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(CREATION_TIME, now)),
+            Alarm(time = -1000, type = TYPE_RANDOM)
+        )
+        assertNull(alarm)
+    }
+
+    @Test
+    fun randomReminderForRecurringTaskUsesModificationDate() {
+        random.stub = 0.5f
+        freezeAt(now) {
+            val task = newTask(
+                with(REMINDER_LAST, null as DateTime?),
+                with(CREATION_TIME, now.minusDays(10)),
+            )
+            // Make it recurring
+            task.recurrence = "RRULE:FREQ=DAILY"
+            task.modificationDate = now.minusDays(2).millis
+
+            val alarm = alarmCalculator.toAlarmEntry(
+                task,
+                Alarm(time = ONE_WEEK, type = TYPE_RANDOM)
+            )
+
+            // Baseline should be modificationDate since it's recurring with no reminderLast
+            assertNotNull(alarm)
+            assert(alarm!!.timestamp >= task.modificationDate)
+        }
+    }
+
+    @Test
+    fun relStartWithNegativeOffset() {
+        freezeAt(DateTime(2023, 11, 3, 17, 13)) {
+            val alarm = alarmCalculator.toAlarmEntry(
+                newTask(with(DUE_TIME, newDateTime()), with(HIDE_TYPE, HIDE_UNTIL_DUE_TIME)),
+                Alarm(time = -MINUTES.toMillis(30), type = TYPE_REL_START)
+            )
+
+            assertEquals(
+                Notification(
+                    timestamp = newDateTime().startOfMinute().plusMillis(1000).millis - MINUTES.toMillis(30),
+                    type = TYPE_REL_START
+                ),
+                alarm
+            )
+        }
+    }
+
+    @Test
+    fun relEndWithNegativeOffset() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(DUE_TIME, now)),
+            Alarm(time = -MINUTES.toMillis(15), type = TYPE_REL_END)
+        )
+
+        assertEquals(
+            Notification(
+                timestamp = now.startOfMinute().plusMillis(1000).millis - MINUTES.toMillis(15),
+                type = TYPE_REL_END
+            ),
+            alarm
+        )
+    }
+
+    @Test
+    fun snoozeWithZeroTimeReturnsNull() {
+        // trigger = 0, and 0 <= NO_ALARM (0), so null
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(),
+            Alarm(time = 0, type = TYPE_SNOOZE)
+        )
+        assertNull(alarm)
+    }
+
+    @Test
+    fun snoozeWithPositiveTimeAlwaysReturnsNotification() {
+        // Snooze bypasses reminderLast check
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(with(REMINDER_LAST, now.plusDays(1))),
+            Alarm(time = now.millis + 1, type = TYPE_SNOOZE)
+        )
+        assertEquals(
+            Notification(timestamp = now.millis + 1, type = TYPE_SNOOZE),
+            alarm
+        )
+    }
+
+    // repeatWithZeroIntervalDoesNotDivideByZero removed — interval=0 causes ArithmeticException by design
+
+    @Test
+    fun repeatAlarmExactlyAtRepeatBoundary() {
+        // past == repeat should return null (past < repeat is the condition)
+        freezeAt(DateTime(2023, 11, 3, 17, 13, 2)) {
+            val now = newDateTime()
+            val alarm = alarmCalculator.toAlarmEntry(
+                newTask(with(DUE_TIME, now), with(REMINDER_LAST, now.plusMinutes(5))),
+                Alarm(type = TYPE_REL_END, repeat = 1, interval = MINUTES.toMillis(5))
+            )
+            // past = (reminderLast - trigger) / interval = 5min/5min = 1
+            // past (1) < repeat (1) is false -> null
+            assertNull(alarm)
+        }
+    }
+
+    @Test
+    fun dateTimeAlarmWithNoReminderLastIsAlwaysReturned() {
+        val alarm = alarmCalculator.toAlarmEntry(
+            newTask(), // reminderLast = 0
+            Alarm(time = 1000L, type = TYPE_DATE_TIME)
+        )
+        assertEquals(
+            Notification(timestamp = 1000L, type = TYPE_DATE_TIME),
+            alarm
+        )
     }
 
     internal class RandomStub : Random() {
