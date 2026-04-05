@@ -8,7 +8,10 @@ import net.fortuna.ical4j.model.Recur.Frequency.MONTHLY
 import net.fortuna.ical4j.model.Recur.Frequency.SECONDLY
 import net.fortuna.ical4j.model.Recur.Frequency.YEARLY
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
+import org.junit.Assert.assertTrue
 import org.junit.Test
+import org.tasks.repeats.CustomRecurrenceActivity.Companion.EXTRA_ACCOUNT_TYPE
 import org.tasks.repeats.CustomRecurrenceActivity.Companion.EXTRA_DATE
 import org.tasks.repeats.CustomRecurrenceActivity.Companion.EXTRA_RRULE
 import org.tasks.time.DateTime
@@ -298,17 +301,82 @@ class CustomRecurrenceViewModelTest {
         assert(!CustomRecurrenceViewModel.FREQ_MICROSOFT.contains(HOURLY))
     }
 
+    // --- Microsoft task tests (isMicrosoftTask branch) ---
+
+    @Test
+    fun microsoftTaskUsesFreqMicrosoft() {
+        val state = newVM(recur = "FREQ=DAILY", isMicrosoft = true).state.value
+        assertEquals(CustomRecurrenceViewModel.FREQ_MICROSOFT, state.frequencyOptions)
+    }
+
+    @Test
+    fun microsoftTaskEndSelectionAlwaysZero() {
+        val state = newVM(recur = "FREQ=WEEKLY;COUNT=5", isMicrosoft = true).state.value
+        assertEquals(0, state.endSelection)
+    }
+
+    @Test
+    fun microsoftTaskMonthDayNull() {
+        val state = newVM(
+            recur = "FREQ=MONTHLY;BYDAY=2MO",
+            dueDate = DateTime(2023, 7, 10),
+            isMicrosoft = true
+        ).state.value
+        assertEquals(null, state.monthDay)
+    }
+
+    @Test
+    fun nonMicrosoftTaskEndSelectionFromCount() {
+        val state = newVM(recur = "FREQ=WEEKLY;COUNT=5").state.value
+        assertEquals(2, state.endSelection)
+    }
+
+    @Test
+    fun intervalExactlyOnePreserved() {
+        val state = newVM("FREQ=DAILY;INTERVAL=1").state.value
+        assertEquals(1, state.interval)
+    }
+
+    @Test
+    fun countZeroGivesEndSelection2() {
+        val state = newVM("FREQ=DAILY;COUNT=0").state.value
+        assertEquals(2, state.endSelection)
+        assertEquals(0, state.endCount)
+    }
+
+    @Test
+    fun frequencyNotInListDefaultsToWeekly() {
+        // SECONDLY is not in FREQ_MICROSOFT
+        val state = newVM(recur = "FREQ=SECONDLY", isMicrosoft = true).state.value
+        assertEquals(net.fortuna.ical4j.model.Recur.Frequency.WEEKLY, state.frequency)
+    }
+
+    @Test
+    fun microsoftTaskIsFlaggedTrue() {
+        assertTrue(newVM(isMicrosoft = true).state.value.isMicrosoftTask)
+    }
+
+    @Test
+    fun nonMicrosoftTaskIsFlaggedFalse() {
+        assertFalse(newVM().state.value.isMicrosoftTask)
+    }
+
     private fun newVM(
         recur: String? = null,
         dueDate: DateTime = DateTime(0),
+        isMicrosoft: Boolean = false,
         block: CustomRecurrenceViewModel.() -> Unit = {}
     ) =
         CustomRecurrenceViewModel(
             savedStateHandle = SavedStateHandle(
-                mapOf(
-                    EXTRA_RRULE to recur,
-                    EXTRA_DATE to dueDate.millis,
-                )
+                buildMap {
+                    put(EXTRA_RRULE, recur)
+                    put(EXTRA_DATE, dueDate.millis)
+                    if (isMicrosoft) put(
+                        CustomRecurrenceActivity.EXTRA_ACCOUNT_TYPE,
+                        org.tasks.data.entity.CaldavAccount.TYPE_MICROSOFT
+                    )
+                }
             ),
             locale = Locale.getDefault()
         ).also(block)
