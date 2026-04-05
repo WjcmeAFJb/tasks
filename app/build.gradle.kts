@@ -401,8 +401,8 @@ tasks.register<JavaExec>("pitestMutationTesting") {
         args(
             "--reportDir", reportDir.get().asFile.absolutePath,
             "--sourceDirs", file("src/main/java").absolutePath + "," + file("src/generic/java").absolutePath,
-            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,org.tasks.data.entity.*,org.tasks.data.sql.*,org.tasks.security.*,org.tasks.sync.microsoft.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
-            "--excludedClasses", "*Test,*Tests,*Test$*,*Tests$*,*Maker*,*TestCase*,*TestUtilities*",
+            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,org.tasks.data.entity.*,org.tasks.data.sql.*,org.tasks.security.*,org.tasks.sync.microsoft.*,org.tasks.time.*,org.tasks.filters.*,org.tasks.preferences.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
+            "--excludedClasses", "*Test,*Tests,*Test$*,*Tests$*,*Maker*,*TestCase*,*TestUtilities*,*Activity,*Fragment,*ControlSet,*Screen,*Dialog,*Adapter,*ViewHolder",
             "--targetTests", "org.tasks.*,com.todoroo.*",
             "--classPath", fullCp,
             "--mutators", "STRONGER",

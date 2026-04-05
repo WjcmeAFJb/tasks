@@ -2,6 +2,8 @@ package org.tasks.sync.microsoft
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
+import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -120,6 +122,78 @@ class MicrosoftConverterSubtaskTest {
             val task = Task(title = null)
             val item = task.toChecklistItem(null)
             assertEquals("", item.displayName)
+        }
+    }
+
+    // --- Mutation-killing tests ---
+
+    @Test
+    fun applySubtaskSetsCreationDate() {
+        withTZ("UTC") {
+            val task = Task()
+            task.applySubtask(0, 0, Tasks.Task.ChecklistItem(
+                displayName = "x",
+                isChecked = false,
+                createdDateTime = "2023-09-18T04:43:10.117Z",
+            ))
+            assertTrue(task.creationDate > 0)
+        }
+    }
+
+    @Test
+    fun applySubtaskCheckedUsesCheckedDateTime() {
+        withTZ("UTC") {
+            val task = Task()
+            task.applySubtask(0, 0, Tasks.Task.ChecklistItem(
+                displayName = "x",
+                isChecked = true,
+                checkedDateTime = "2023-09-18T04:43:10.117Z",
+            ))
+            // completionDate should come from checkedDateTime, not parentCompletionDate
+            assertTrue(task.completionDate > 0)
+            assertNotEquals(99999L, task.completionDate)
+        }
+    }
+
+    @Test
+    fun applySubtaskUncheckedUsesParentCompletionExactly() {
+        withTZ("UTC") {
+            val task = Task()
+            task.applySubtask(0, 77777L, Tasks.Task.ChecklistItem(
+                displayName = "x",
+                isChecked = false,
+            ))
+            assertEquals(77777L, task.completionDate)
+        }
+    }
+
+    @Test
+    fun toChecklistItemHasCreatedDateTime() {
+        withTZ("UTC") {
+            val task = Task(creationDate = DateTime(2023, 9, 1).millis)
+            val item = task.toChecklistItem("id")
+            assertNotNull(item.createdDateTime)
+            assertTrue(item.createdDateTime!!.contains("2023"))
+        }
+    }
+
+    @Test
+    fun toChecklistItemCompletedHasCheckedDateTime() {
+        withTZ("UTC") {
+            val task = Task(completionDate = DateTime(2023, 9, 1, 10, 30).millis)
+            val item = task.toChecklistItem("id")
+            assertTrue(item.isChecked)
+            assertNotNull(item.checkedDateTime)
+        }
+    }
+
+    @Test
+    fun toChecklistItemIncompleteNoCheckedDateTime() {
+        withTZ("UTC") {
+            val task = Task(completionDate = 0)
+            val item = task.toChecklistItem("id")
+            assertFalse(item.isChecked)
+            assertNull(item.checkedDateTime)
         }
     }
 }
