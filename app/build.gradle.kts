@@ -92,7 +92,8 @@ android {
             resValue("string", "google_key", tasks_google_key_debug ?: "")
             resValue("string", "posthog_key", "")
             enableUnitTestCoverage = project.hasProperty("coverage")
-            enableAndroidTestCoverage = project.hasProperty("androidCoverage")
+            // enableAndroidTestCoverage is blocked by :icons module
+            // (OutlinedGoogleMaterial$Icon.<clinit> exceeds 64KB after JaCoCo)
         }
         release {
             val tasks_mapbox_key: String? by project

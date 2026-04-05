@@ -51,10 +51,8 @@ include(":wear")
 include(":wear-datalayer")
 include(":composeApp")
 
-// For instrumented coverage builds, swap :icons with a stub that JaCoCo can
-// instrument. The real icons module's OutlinedGoogleMaterial$Icon enum has
-// 3249 entries whose <clinit> exceeds 64KB after JaCoCo probe insertion.
-// Use -PandroidCoverage (not -Pcoverage) to activate this swap.
-if (providers.gradleProperty("androidCoverage").isPresent) {
-    project(":icons").projectDir = file("icons-stub")
-}
+// Note: enableAndroidTestCoverage cannot be used because JaCoCo fails to
+// instrument the :icons module (OutlinedGoogleMaterial$Icon.<clinit> exceeds
+// 64KB after JaCoCo probe insertion, MethodTooLargeException). AGP provides
+// no per-class exclusion for the JaCoCo transform.
+// Instrumented test coverage uses the -Pcoverage flag with unit test data only.
