@@ -156,6 +156,148 @@ class CustomRecurrenceViewModelTest {
         )
     }
 
+    // --- Mutation-killing tests for init block boundary conditions ---
+
+    @Test
+    fun zeroIntervalDefaultsToOne() {
+        val state = newVM("FREQ=DAILY;INTERVAL=0").state.value
+        assertEquals(1, state.interval)
+    }
+
+    @Test
+    fun negativeIntervalDefaultsToOne() {
+        val state = newVM("FREQ=DAILY;INTERVAL=-5").state.value
+        assertEquals(1, state.interval)
+    }
+
+    @Test
+    fun positiveIntervalPreserved() {
+        val state = newVM("FREQ=DAILY;INTERVAL=3").state.value
+        assertEquals(3, state.interval)
+    }
+
+    @Test
+    fun nullRruleGivesDefaultState() {
+        val state = newVM().state.value
+        assertEquals(1, state.interval)
+        assertEquals(net.fortuna.ical4j.model.Recur.Frequency.WEEKLY, state.frequency)
+    }
+
+    @Test
+    fun blankRruleGivesDefaultState() {
+        val state = newVM("").state.value
+        assertEquals(net.fortuna.ical4j.model.Recur.Frequency.WEEKLY, state.frequency)
+    }
+
+    @Test
+    fun countEndSelectionParsed() {
+        val state = newVM("FREQ=WEEKLY;COUNT=5").state.value
+        assertEquals(2, state.endSelection) // 2 = count
+        assertEquals(5, state.endCount)
+    }
+
+    @Test
+    fun untilEndSelectionParsed() {
+        val state = newVM("FREQ=WEEKLY;UNTIL=20230726").state.value
+        assertEquals(1, state.endSelection) // 1 = until
+    }
+
+    @Test
+    fun noEndSelectionParsed() {
+        val state = newVM("FREQ=DAILY").state.value
+        assertEquals(0, state.endSelection) // 0 = never
+    }
+
+    @Test
+    fun weeklyDaysParsed() {
+        val state = newVM("FREQ=WEEKLY;BYDAY=MO,WE,FR").state.value
+        assertEquals(3, state.selectedDays.size)
+        assertEquals(listOf(DayOfWeek.MONDAY, DayOfWeek.WEDNESDAY, DayOfWeek.FRIDAY), state.selectedDays)
+    }
+
+    @Test
+    fun nonWeeklyDaysIgnored() {
+        val state = newVM("FREQ=DAILY;BYDAY=MO,WE").state.value
+        assertEquals(0, state.selectedDays.size)
+    }
+
+    @Test
+    fun dueDateZeroUsesCurrentTime() {
+        val state = newVM(dueDate = DateTime(0)).state.value
+        // dueDate should be > 0 (set to startOfDay of current time)
+        assert(state.dueDate > 0)
+    }
+
+    @Test
+    fun dueDatePreserved() {
+        val date = DateTime(2023, 8, 15)
+        val state = newVM(dueDate = date).state.value
+        assertEquals(date.millis, state.dueDate)
+    }
+
+    @Test
+    fun endCountDefaultsToOneWithNoCount() {
+        val state = newVM("FREQ=DAILY").state.value
+        assertEquals(1, state.endCount)
+    }
+
+    @Test
+    fun setOccurrencesUpdatesEndCount() {
+        val vm = newVM { setOccurrences(10) }
+        assertEquals(10, vm.state.value.endCount)
+    }
+
+    @Test
+    fun setEndTypeUpdatesSelection() {
+        val vm = newVM { setEndType(2) }
+        assertEquals(2, vm.state.value.endSelection)
+    }
+
+    @Test
+    fun setIntervalUpdatesState() {
+        val vm = newVM { setInterval(7) }
+        assertEquals(7, vm.state.value.interval)
+    }
+
+    @Test
+    fun toggleDayOnAndOff() {
+        val vm = newVM {
+            toggleDay(DayOfWeek.FRIDAY)
+            toggleDay(DayOfWeek.FRIDAY)
+        }
+        assertEquals(0, vm.state.value.selectedDays.size)
+    }
+
+    @Test
+    fun monthDayParsedForMonthly() {
+        val state = newVM(
+            recur = "FREQ=MONTHLY;BYDAY=2MO",
+            dueDate = DateTime(2023, 7, 10)
+        ).state.value
+        assert(state.monthDay != null)
+    }
+
+    @Test
+    fun monthDayNullForNonMonthly() {
+        val state = newVM("FREQ=DAILY;BYDAY=MO").state.value
+        assertEquals(null, state.monthDay)
+    }
+
+    @Test
+    fun freqAllIncludesMinutely() {
+        assert(CustomRecurrenceViewModel.FREQ_ALL.contains(MINUTELY))
+    }
+
+    @Test
+    fun freqMicrosoftExcludesMinutely() {
+        assert(!CustomRecurrenceViewModel.FREQ_MICROSOFT.contains(MINUTELY))
+    }
+
+    @Test
+    fun freqMicrosoftExcludesHourly() {
+        assert(!CustomRecurrenceViewModel.FREQ_MICROSOFT.contains(HOURLY))
+    }
+
     private fun newVM(
         recur: String? = null,
         dueDate: DateTime = DateTime(0),
