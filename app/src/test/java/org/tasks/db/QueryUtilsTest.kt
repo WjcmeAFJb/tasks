@@ -92,4 +92,96 @@ class QueryUtilsTest {
         val query = "SELECT * FROM tasks WHERE title = 'test'"
         assertEquals(query, QueryUtils.showHiddenAndCompleted(query))
     }
+
+    // --- Additional tests for better coverage ---
+
+    @Test
+    fun showHiddenReplacesMultipleOccurrences() {
+        val hidden = Task.HIDE_UNTIL.lte(Functions.now()).toString()
+        val query = "$hidden AND $hidden"
+        val result = QueryUtils.showHidden(query)
+        assertEquals("(1) AND (1)", result)
+    }
+
+    @Test
+    fun showCompletedReplacesMultipleOccurrences() {
+        val completed = Task.COMPLETION_DATE.eq(0).toString()
+        val query = "$completed OR $completed"
+        val result = QueryUtils.showCompleted(query)
+        assertEquals("(1) OR (1)", result)
+    }
+
+    @Test
+    fun removeOrderWithMultipleColumns() {
+        val query = "SELECT * FROM tasks WHERE 1 order by tasks.title, tasks.dueDate asc"
+        val result = QueryUtils.removeOrder(query)
+        assertEquals("SELECT * FROM tasks WHERE 1 ", result)
+    }
+
+    @Test
+    fun emptyQueryShowHidden() {
+        assertEquals("", QueryUtils.showHidden(""))
+    }
+
+    @Test
+    fun emptyQueryShowCompleted() {
+        assertEquals("", QueryUtils.showCompleted(""))
+    }
+
+    @Test
+    fun emptyQueryRemoveOrder() {
+        assertEquals("", QueryUtils.removeOrder(""))
+    }
+
+    @Test
+    fun emptyQueryShowHiddenAndCompleted() {
+        assertEquals("", QueryUtils.showHiddenAndCompleted(""))
+    }
+
+    @Test
+    fun removeOrderUpperCase() {
+        val query = "SELECT * FROM tasks ORDER BY tasks.title DESC"
+        assertEquals("SELECT * FROM tasks ", QueryUtils.removeOrder(query))
+    }
+
+    @Test
+    fun showHiddenAndCompletedChainedOrder() {
+        val hidden = Task.HIDE_UNTIL.lte(Functions.now()).toString()
+        val completed = Task.COMPLETION_DATE.eq(0).toString()
+        // Verify order doesn't matter
+        val query = "$completed AND $hidden"
+        val result1 = QueryUtils.showHiddenAndCompleted(query)
+        assertEquals("(1) AND (1)", result1)
+    }
+
+    @Test
+    fun removeOrderPreservesWhereClause() {
+        val query = "SELECT * FROM tasks WHERE title LIKE '%test%' order by tasks.title asc"
+        val result = QueryUtils.removeOrder(query)
+        assertEquals("SELECT * FROM tasks WHERE title LIKE '%test%' ", result)
+    }
+
+    @Test
+    fun showHiddenWithSurroundingText() {
+        val hidden = Task.HIDE_UNTIL.lte(Functions.now()).toString()
+        val query = "SELECT * FROM tasks WHERE $hidden AND title = 'foo'"
+        val result = QueryUtils.showHidden(query)
+        assertEquals("SELECT * FROM tasks WHERE (1) AND title = 'foo'", result)
+    }
+
+    @Test
+    fun showCompletedWithSurroundingText() {
+        val completed = Task.COMPLETION_DATE.eq(0).toString()
+        val query = "SELECT * FROM tasks WHERE $completed AND title = 'foo'"
+        val result = QueryUtils.showCompleted(query)
+        assertEquals("SELECT * FROM tasks WHERE (1) AND title = 'foo'", result)
+    }
+
+    @Test
+    fun removeOrderDoesNotAffectOrderWordInContent() {
+        // "order" appearing as part of data shouldn't be matched by the regex
+        // which requires "order by ... (asc|desc)"
+        val query = "SELECT * FROM tasks WHERE title = 'my order'"
+        assertEquals(query, QueryUtils.removeOrder(query))
+    }
 }

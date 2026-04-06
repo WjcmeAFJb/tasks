@@ -63,4 +63,35 @@ class CaldavCalendarTest {
         val b = CaldavCalendar(uuid = "abc", account = "acc", name = "Test")
         assertEquals(a, b)
     }
+
+    @Test fun calendarUriNullWhenUrlOnlySlashes() =
+        assertNull(CaldavCalendar(url = "///").calendarUri)
+
+    @Test fun calendarUriSimpleName() =
+        assertEquals("calendar-id", CaldavCalendar(url = "calendar-id").calendarUri)
+
+    @Test fun tableExpression() =
+        assertEquals("caldav_lists", CaldavCalendar.TABLE.expression)
+
+    @Test fun accountColumnExpression() =
+        assertEquals("caldav_lists.cdl_account", CaldavCalendar.ACCOUNT.expression)
+
+    @Test fun uuidColumnExpression() =
+        assertEquals("caldav_lists.cdl_uuid", CaldavCalendar.UUID.expression)
+
+    @Test fun nameColumnExpression() =
+        assertEquals("caldav_lists.cdl_name", CaldavCalendar.NAME.expression)
+
+    @Test fun orderColumnExpression() =
+        assertEquals("caldav_lists.cdl_order", CaldavCalendar.ORDER.expression)
+
+    @Test fun hashCodeConsistentWithEquals() {
+        val a = CaldavCalendar(uuid = "abc", name = "Test")
+        val b = CaldavCalendar(uuid = "abc", name = "Test")
+        assertEquals(a.hashCode(), b.hashCode())
+    }
+
+    @Test fun defaultUuid() = assertEquals(Task.NO_UUID, CaldavCalendar().uuid)
+    @Test fun defaultAccount() = assertEquals(Task.NO_UUID, CaldavCalendar().account)
+    @Test fun defaultUrl() = assertEquals("", CaldavCalendar().url)
 }

@@ -297,4 +297,72 @@ class TaskSaverTest {
         verify(syncAdapters).sync(SyncSource.TASK_CHANGE)
         verify(refreshBroadcaster).broadcastRefresh()
     }
+
+    // --- afterSave: with null original ---
+
+    @Test
+    fun afterSaveWithNullOriginalCompletionDateModified() = runTest {
+        // When original is null, completionDate defaults to 0, so completionDate=1000 is "modified"
+        val task = Task(id = 1, completionDate = 1000L, timerStart = 500L)
+
+        taskSaver.afterSave(task, null)
+
+        verify(timerPlugin).stopTimer(task)
+    }
+
+    @Test
+    fun afterSaveWithNullOriginalDeletionDateModified() = runTest {
+        val task = Task(id = 1, deletionDate = 1000L)
+
+        taskSaver.afterSave(task, null)
+
+        verify(locationService).updateGeofences(1L)
+    }
+
+    @Test
+    fun afterSaveWithNullOriginalDueDateChangedToFuture() = runTest {
+        val farFuture = System.currentTimeMillis() + 86_400_000L
+        val task = Task(id = 1, dueDate = farFuture)
+
+        taskSaver.afterSave(task, null)
+
+        verify(notifier).cancel(1L)
+    }
+
+    @Test
+    fun afterSaveDoesNotCancelNotificationWhenDueDateInPast() = runTest {
+        val task = Task(id = 1, dueDate = 1000L)
+        val original = Task(id = 1, dueDate = 2000L)
+
+        taskSaver.afterSave(task, original)
+
+        verify(notifier, never()).cancel(anyLong())
+    }
+
+    @Test
+    fun afterSaveSyncsAlways() = runTest {
+        val task = Task(id = 1)
+
+        taskSaver.afterSave(task, task.copy())
+
+        verify(syncAdapters).sync(any<Task>(), any())
+    }
+
+    @Test
+    fun savePassesOriginalToUpdate() = runTest {
+        val task = Task(id = 1, title = "Updated")
+        val original = Task(id = 1, title = "Original")
+        `when`(taskDao.update(any<Task>(), any())).thenReturn(true)
+
+        taskSaver.save(task, original)
+
+        verify(taskDao).update(task, original)
+    }
+
+    @Test
+    fun setCollapsedCallsTaskDaoSetCollapsed() = runTest {
+        taskSaver.setCollapsed(99L, true)
+
+        verify(taskDao).setCollapsed(org.mockito.kotlin.eq(listOf(99L)), org.mockito.kotlin.eq(true), org.mockito.kotlin.any())
+    }
 }

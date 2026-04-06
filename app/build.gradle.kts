@@ -123,6 +123,7 @@ android {
     }
 
     testOptions {
+        unitTests.isReturnDefaultValues = true
         managedDevices {
             localDevices {
                 create("pixel2api30") {
@@ -285,7 +286,11 @@ dependencies {
     testImplementation(libs.make.it.easy)
     testImplementation(libs.androidx.test.core)
     testImplementation(libs.mockito.core)
+    testImplementation("org.mockito.kotlin:mockito-kotlin:5.4.0")
     testImplementation(libs.xpp3)
+    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("androidx.test:runner:1.6.2")
+    testImplementation("androidx.test.ext:junit:1.2.1")
 }
 
 // ---------------------------------------------------------------------------
@@ -303,6 +308,11 @@ if (project.hasProperty("coverage")) {
         group = "Verification"
         description = "Generates merged JaCoCo coverage report (unit + instrumented)."
 
+        dependsOn("transformGenericDebugClassesWithAsm")
+        dependsOn("testGenericDebugUnitTest")
+        dependsOn(":kmp:bundleLibRuntimeToDirDebug")
+        dependsOn(":data:bundleLibRuntimeToDirDebug")
+
         reports {
             html.required.set(true)
             xml.required.set(true)
@@ -314,6 +324,21 @@ if (project.hasProperty("coverage")) {
             "**/BuildConfig.*",
             "**/Manifest*.*",
             "**/databinding/**",
+            // Hilt/Dagger dependency injection (auto-generated, 0% coverage)
+            "**/hilt_aggregated_deps/**",
+            "**/Hilt_*.*",
+            "**/*_HiltModules*.*",
+            "**/*_Factory.*",
+            "**/*_MembersInjector.*",
+            "**/*Module_*Factory.*",
+            "**/Dagger*.*",
+            // KMP generated resource accessors (auto-generated, 0% coverage)
+            "**/tasks/kmp/generated/**",
+            // Compose-generated code (0% coverage)
+            "**/*ComposableSingletons*.*",
+            // Other generated code (0% coverage)
+            "**/DataBinderMapperImpl.*",
+            "**/BuildSetup.*",
         )
 
         // Use the same class directories that AGP's JaCoCo instrumentation uses.

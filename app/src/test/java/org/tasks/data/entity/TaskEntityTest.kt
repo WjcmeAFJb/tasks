@@ -2,6 +2,7 @@ package org.tasks.data.entity
 
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
+import org.junit.Assert.assertNotEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -669,5 +670,570 @@ class TaskEntityTest {
             "FREQ=DAILY;COUNT=5",
             "FREQ=DAILY;COUNT=5".sanitizeRecur()
         )
+    }
+
+    // --- readOnly flag ---
+
+    @Test
+    fun readOnlyDefaultIsFalse() {
+        val task = Task()
+        assertFalse(task.readOnly)
+    }
+
+    @Test
+    fun readOnlyCanBeSetTrue() {
+        val task = Task(readOnly = true)
+        assertTrue(task.readOnly)
+    }
+
+    // --- RepeatFrom constants ---
+
+    @Test
+    fun repeatFromDueDateIsZero() {
+        assertEquals(0, Task.RepeatFrom.DUE_DATE)
+    }
+
+    @Test
+    fun repeatFromCompletionDateIsOne() {
+        assertEquals(1, Task.RepeatFrom.COMPLETION_DATE)
+    }
+
+    // --- Notification flag constants ---
+
+    @Test
+    fun notifyAtDeadlineConstant() {
+        assertEquals(1 shl 1, Task.NOTIFY_AT_DEADLINE)
+    }
+
+    @Test
+    fun notifyAfterDeadlineConstant() {
+        assertEquals(1 shl 2, Task.NOTIFY_AFTER_DEADLINE)
+    }
+
+    @Test
+    fun notifyModeNonstopConstant() {
+        assertEquals(1 shl 3, Task.NOTIFY_MODE_NONSTOP)
+    }
+
+    @Test
+    fun notifyModeFiveConstant() {
+        assertEquals(1 shl 4, Task.NOTIFY_MODE_FIVE)
+    }
+
+    @Test
+    fun notifyAtStartConstant() {
+        assertEquals(1 shl 5, Task.NOTIFY_AT_START)
+    }
+
+    // --- Additional urgency constants ---
+
+    @Test
+    fun urgencyTodayIsOne() {
+        assertEquals(1, Task.URGENCY_TODAY)
+    }
+
+    @Test
+    fun urgencyTomorrowIsTwo() {
+        assertEquals(2, Task.URGENCY_TOMORROW)
+    }
+
+    @Test
+    fun urgencyDayAfterIsThree() {
+        assertEquals(3, Task.URGENCY_DAY_AFTER)
+    }
+
+    @Test
+    fun urgencyNextWeekIsFour() {
+        assertEquals(4, Task.URGENCY_NEXT_WEEK)
+    }
+
+    @Test
+    fun urgencyInTwoWeeksIsFive() {
+        assertEquals(5, Task.URGENCY_IN_TWO_WEEKS)
+    }
+
+    // --- TABLE_NAME ---
+
+    @Test
+    fun tableNameIsTasks() {
+        assertEquals("tasks", Task.TABLE_NAME)
+    }
+
+    // --- NO_ID ---
+
+    @Test
+    fun noIdIsZero() {
+        assertEquals(0L, NO_ID)
+    }
+
+    // --- NO_UUID ---
+
+    @Test
+    fun noUuidIsZeroString() {
+        assertEquals("0", NO_UUID)
+    }
+
+    // --- isValidUuid ---
+
+    @Test
+    fun isValidUuidForPositiveNumber() {
+        assertTrue(Task.isValidUuid("12345"))
+    }
+
+    @Test
+    fun isValidUuidForNonNumericString() {
+        // Non-numeric UUIDs trigger NumberFormatException, then fall through to isUuidEmpty
+        // A non-empty non-numeric string is not empty, so isUuidEmpty returns false
+        assertFalse(Task.isValidUuid("abc-def"))
+    }
+
+    @Test
+    fun isValidUuidReturnsFalseForNoUuid() {
+        // "0" parses as 0L which is not > 0, so returns false
+        assertFalse(Task.isValidUuid(NO_UUID))
+    }
+
+    // --- isCollapsed ---
+
+    @Test
+    fun defaultIsCollapsedIsFalse() {
+        val task = Task()
+        assertFalse(task.isCollapsed)
+    }
+
+    @Test
+    fun isCollapsedCanBeSetTrue() {
+        val task = Task(isCollapsed = true)
+        assertTrue(task.isCollapsed)
+    }
+
+    // --- default notes and title ---
+
+    @Test
+    fun defaultTitleIsNull() {
+        val task = Task()
+        assertNull(task.title)
+    }
+
+    @Test
+    fun defaultNotesIsNull() {
+        val task = Task()
+        assertNull(task.notes)
+    }
+
+    @Test
+    fun defaultEstimatedSecondsIsZero() {
+        val task = Task()
+        assertEquals(0, task.estimatedSeconds)
+    }
+
+    @Test
+    fun defaultElapsedSecondsIsZero() {
+        val task = Task()
+        assertEquals(0, task.elapsedSeconds)
+    }
+
+    @Test
+    fun defaultTimerStartIsZero() {
+        val task = Task()
+        assertEquals(0L, task.timerStart)
+    }
+
+    @Test
+    fun defaultRingFlagsIsZero() {
+        val task = Task()
+        assertEquals(0, task.ringFlags)
+    }
+
+    @Test
+    fun defaultReminderLastIsZero() {
+        val task = Task()
+        assertEquals(0L, task.reminderLast)
+    }
+
+    @Test
+    fun defaultRecurrenceIsNull() {
+        val task = Task()
+        assertNull(task.recurrence)
+    }
+
+    @Test
+    fun defaultCalendarURIIsNull() {
+        val task = Task()
+        assertNull(task.calendarURI)
+    }
+
+    @Test
+    fun defaultParentIsZero() {
+        val task = Task()
+        assertEquals(0L, task.parent)
+    }
+
+    @Test
+    fun defaultOrderIsNull() {
+        val task = Task()
+        assertNull(task.order)
+    }
+
+    @Test
+    fun defaultHideUntilIsZero() {
+        val task = Task()
+        assertEquals(0L, task.hideUntil)
+    }
+
+    @Test
+    fun defaultCreationDateIsZero() {
+        val task = Task()
+        assertEquals(0L, task.creationDate)
+    }
+
+    @Test
+    fun defaultModificationDateIsZero() {
+        val task = Task()
+        assertEquals(0L, task.modificationDate)
+    }
+
+    // --- Data class equality/hashCode ---
+
+    @Test
+    fun dataClassEquality() {
+        val remoteId = "shared-uuid"
+        val a = Task(id = 1, title = "Test", priority = 2, dueDate = 100L, remoteId = remoteId)
+        val b = Task(id = 1, title = "Test", priority = 2, dueDate = 100L, remoteId = remoteId)
+        assertEquals(a, b)
+    }
+
+    @Test
+    fun dataClassHashCodeConsistency() {
+        val remoteId = "shared-uuid"
+        val a = Task(id = 1, title = "Test", priority = 2, remoteId = remoteId)
+        val b = Task(id = 1, title = "Test", priority = 2, remoteId = remoteId)
+        assertEquals(a.hashCode(), b.hashCode())
+    }
+
+    @Test
+    fun dataClassInequalityOnDifferentTitle() {
+        val remoteId = "shared-uuid"
+        val a = Task(id = 1, title = "A", remoteId = remoteId)
+        val b = Task(id = 1, title = "B", remoteId = remoteId)
+        assertNotEquals(a, b)
+    }
+
+    @Test
+    fun dataClassInequalityOnDifferentId() {
+        val remoteId = "shared-uuid"
+        val a = Task(id = 1, title = "Test", remoteId = remoteId)
+        val b = Task(id = 2, title = "Test", remoteId = remoteId)
+        assertNotEquals(a, b)
+    }
+
+    // --- copy preserves values ---
+
+    @Test
+    fun copyPreservesFields() {
+        val remoteId = "test-uuid"
+        val original = Task(id = 1, title = "Original", priority = Task.Priority.HIGH, remoteId = remoteId)
+        val copy = original.copy(title = "Modified")
+        assertEquals("Modified", copy.title)
+        assertEquals(1L, copy.id)
+        assertEquals(Task.Priority.HIGH, copy.priority)
+        assertEquals(remoteId, copy.remoteId)
+    }
+
+    // --- tags transitory data ---
+
+    @Test
+    fun tagsTransitoryCanBeSet() {
+        val task = Task()
+        val tagsList = arrayListOf("tag1", "tag2")
+        task.putTransitory(Tag.KEY, tagsList)
+        assertEquals(tagsList, task.tags)
+    }
+
+    // --- caldavUpToDate detects more field changes ---
+
+    @Test
+    fun caldavUpToDateDetectsOrderChange() {
+        val task1 = Task(title = "Test", order = 1)
+        val task2 = Task(title = "Test", order = 2)
+        assertFalse(task1.caldavUpToDate(task2))
+    }
+
+    @Test
+    fun caldavUpToDateDetectsParentChange() {
+        val task1 = Task(title = "Test", parent = 1)
+        val task2 = Task(title = "Test", parent = 2)
+        assertFalse(task1.caldavUpToDate(task2))
+    }
+
+    @Test
+    fun caldavUpToDateDetectsNotesChange() {
+        val task1 = Task(title = "Test", notes = "A")
+        val task2 = Task(title = "Test", notes = "B")
+        assertFalse(task1.caldavUpToDate(task2))
+    }
+
+    @Test
+    fun caldavUpToDateIgnoresRingFlags() {
+        val task1 = Task(title = "Test", ringFlags = 0)
+        val task2 = Task(title = "Test", ringFlags = Task.NOTIFY_MODE_NONSTOP)
+        assertTrue(task1.caldavUpToDate(task2))
+    }
+
+    // --- microsoftUpToDate detects more field changes ---
+
+    @Test
+    fun microsoftUpToDateDetectsTitleChange() {
+        val task1 = Task(title = "A")
+        val task2 = Task(title = "B")
+        assertFalse(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateDetectsDueDateChange() {
+        val task1 = Task(title = "Test", dueDate = 100)
+        val task2 = Task(title = "Test", dueDate = 200)
+        assertFalse(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateDetectsCompletionDateChange() {
+        val task1 = Task(title = "Test", completionDate = 0)
+        val task2 = Task(title = "Test", completionDate = 100)
+        assertFalse(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateDetectsDeletionDateChange() {
+        val task1 = Task(title = "Test", deletionDate = 0)
+        val task2 = Task(title = "Test", deletionDate = 100)
+        assertFalse(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateDetectsNotesChange() {
+        val task1 = Task(title = "Test", notes = "A")
+        val task2 = Task(title = "Test", notes = "B")
+        assertFalse(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateIgnoresCollapsed() {
+        val task1 = Task(title = "Test", isCollapsed = false)
+        val task2 = Task(title = "Test", isCollapsed = true)
+        assertTrue(task1.microsoftUpToDate(task2))
+    }
+
+    @Test
+    fun microsoftUpToDateIgnoresOrder() {
+        val task1 = Task(title = "Test", order = 1)
+        val task2 = Task(title = "Test", order = 2)
+        assertTrue(task1.microsoftUpToDate(task2))
+    }
+
+    // --- googleTaskUpToDate detects more field changes ---
+
+    @Test
+    fun googleTaskUpToDateDetectsNotesChange() {
+        val task1 = Task(title = "Test", notes = "A")
+        val task2 = Task(title = "Test", notes = "B")
+        assertFalse(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateDetectsParentChange() {
+        val task1 = Task(title = "Test", parent = 1)
+        val task2 = Task(title = "Test", parent = 2)
+        assertFalse(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateDetectsCompletionDateChange() {
+        val task1 = Task(title = "Test", completionDate = 0)
+        val task2 = Task(title = "Test", completionDate = 100)
+        assertFalse(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateDetectsDeletionDateChange() {
+        val task1 = Task(title = "Test", deletionDate = 0)
+        val task2 = Task(title = "Test", deletionDate = 100)
+        assertFalse(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateDetectsDueDateChange() {
+        val task1 = Task(title = "Test", dueDate = 100)
+        val task2 = Task(title = "Test", dueDate = 200)
+        assertFalse(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateIgnoresRecurrence() {
+        val task1 = Task(title = "Test", recurrence = "FREQ=DAILY")
+        val task2 = Task(title = "Test", recurrence = "FREQ=WEEKLY")
+        assertTrue(task1.googleTaskUpToDate(task2))
+    }
+
+    @Test
+    fun googleTaskUpToDateIgnoresHideUntil() {
+        val task1 = Task(title = "Test", hideUntil = 100)
+        val task2 = Task(title = "Test", hideUntil = 200)
+        assertTrue(task1.googleTaskUpToDate(task2))
+    }
+
+    // --- insignificantChange detects more field differences ---
+
+    @Test
+    fun insignificantChangeDetectsCompletionDateDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, completionDate = 0, remoteId = remoteId)
+        val task2 = Task(id = 1, completionDate = 100, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsDeletionDateDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, deletionDate = 0, remoteId = remoteId)
+        val task2 = Task(id = 1, deletionDate = 100, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsNotesDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, notes = "A", remoteId = remoteId)
+        val task2 = Task(id = 1, notes = "B", remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsEstimatedSecondsDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, estimatedSeconds = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, estimatedSeconds = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsElapsedSecondsDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, elapsedSeconds = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, elapsedSeconds = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsRingFlagsDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, ringFlags = 0, remoteId = remoteId)
+        val task2 = Task(id = 1, ringFlags = Task.NOTIFY_MODE_NONSTOP, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsRecurrenceDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, recurrence = "FREQ=DAILY", remoteId = remoteId)
+        val task2 = Task(id = 1, recurrence = "FREQ=WEEKLY", remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsRemoteIdDifference() {
+        val task1 = Task(id = 1, remoteId = "aaa")
+        val task2 = Task(id = 1, remoteId = "bbb")
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsOrderDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, order = 1, remoteId = remoteId)
+        val task2 = Task(id = 1, order = 2, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsCalendarURIDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, calendarURI = "cal://a", remoteId = remoteId)
+        val task2 = Task(id = 1, calendarURI = "cal://b", remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsParentDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, parent = 1, remoteId = remoteId)
+        val task2 = Task(id = 1, parent = 2, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsDueDateDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, dueDate = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, dueDate = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsHideUntilDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, hideUntil = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, hideUntil = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsCreationDateDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, creationDate = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, creationDate = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    @Test
+    fun insignificantChangeDetectsModificationDateDifference() {
+        val remoteId = "shared-id"
+        val task1 = Task(id = 1, modificationDate = 100, remoteId = remoteId)
+        val task2 = Task(id = 1, modificationDate = 200, remoteId = remoteId)
+        assertFalse(task1.insignificantChange(task2))
+    }
+
+    // --- sanitizeRecur edge cases ---
+
+    @Test
+    fun sanitizeRecurHandlesEmptyString() {
+        assertEquals("", "".sanitizeRecur())
+    }
+
+    @Test
+    fun sanitizeRecurRemovesMultipleInvalidPatterns() {
+        assertEquals(
+            "FREQ=WEEKLY",
+            "FREQ=WEEKLYBYDAY=;;COUNT=-1".sanitizeRecur()
+        )
+    }
+
+    // --- isUuidEmpty edge cases ---
+
+    @Test
+    fun isUuidEmptyForWhitespaceIsNotEmpty() {
+        assertFalse(Task.isUuidEmpty("  "))
+    }
+
+    // --- TRANS constants ---
+
+    @Test
+    fun transDefaultAlarmsConstant() {
+        assertEquals("default_alarms", Task.TRANS_DEFAULT_ALARMS)
+    }
+
+    @Test
+    fun transRandomConstant() {
+        assertEquals("random", Task.TRANS_RANDOM)
     }
 }
