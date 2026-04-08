@@ -30,6 +30,8 @@ import org.tasks.security.DesktopKeyProvider
 import org.tasks.security.KeyStoreEncryption
 import org.tasks.sse.SseClient
 import org.tasks.sse.SseTokenProvider
+import org.tasks.timers.NoOpTimeTracker
+import org.tasks.timers.TimeTracker
 import java.io.File
 import java.util.Properties
 
@@ -48,6 +50,7 @@ private val config: Properties by lazy {
 private object DesktopModule
 
 actual fun platformModule(): Module = module {
+    factory<TimeTracker> { NoOpTimeTracker() }
     singleOf(::TasksServerEnvironment)
     single { PlatformConfiguration() }
     single<Reporting> { PostHogReporting(config.getProperty("posthog.key", "")) }

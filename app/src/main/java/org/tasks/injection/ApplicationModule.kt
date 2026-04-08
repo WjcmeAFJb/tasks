@@ -81,6 +81,8 @@ import org.tasks.security.KeyStoreEncryption
 import org.tasks.service.TaskCleanup
 import org.tasks.service.TaskDeleter
 import org.tasks.sync.SyncAdapters
+import org.tasks.timers.SimpleTimeTrackerIntegration
+import org.tasks.timers.TimeTracker
 import org.tasks.preferences.DefaultFilterProvider
 import org.tasks.themes.ColorProvider
 import org.tasks.compose.chips.ChipDataProvider
@@ -361,10 +363,17 @@ class ApplicationModule {
     ) = TaskSaver(taskDao, refreshBroadcaster, notifier, locationService, timerPlugin, syncAdapters, backgroundWork)
 
     @Provides
+    fun providesTimeTracker(
+        @ApplicationContext context: Context,
+    ): TimeTracker = SimpleTimeTrackerIntegration(context)
+
+    @Provides
     fun providesTimerPlugin(
         notifier: Notifier,
         taskDao: TaskDao,
-    ) = TimerPlugin(notifier, taskDao)
+        tagDataDao: TagDataDao,
+        timeTracker: TimeTracker,
+    ) = TimerPlugin(notifier, taskDao, tagDataDao, timeTracker)
 
     @Provides
     fun providesCaldavSynchronizer(

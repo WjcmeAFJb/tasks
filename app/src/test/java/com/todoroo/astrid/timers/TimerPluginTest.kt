@@ -5,24 +5,37 @@ import org.junit.Assert.assertEquals
 import org.junit.Before
 import org.junit.Test
 import org.mockito.Mockito.mock
+import org.mockito.Mockito.never
 import org.mockito.Mockito.times
 import org.mockito.Mockito.verify
+import org.mockito.kotlin.any
+import org.mockito.kotlin.eq
+import org.mockito.kotlin.whenever
+import org.tasks.data.dao.TagDataDao
+import org.tasks.data.entity.Tag
 import org.tasks.data.dao.TaskDao
+import org.tasks.data.entity.TagData
 import org.tasks.data.entity.Task
 import org.tasks.notifications.Notifier
 import org.tasks.time.DateTimeUtils2
+import org.tasks.timers.TimeTracker
 
 class TimerPluginTest {
 
     private lateinit var taskDao: TaskDao
     private lateinit var notifier: Notifier
+    private lateinit var tagDataDao: TagDataDao
+    private lateinit var timeTracker: TimeTracker
     private lateinit var timerPlugin: TimerPlugin
 
     @Before
-    fun setUp() {
+    fun setUp() = runTest {
         taskDao = mock(TaskDao::class.java)
         notifier = mock(Notifier::class.java)
-        timerPlugin = TimerPlugin(notifier, taskDao)
+        tagDataDao = mock(TagDataDao::class.java)
+        timeTracker = mock(TimeTracker::class.java)
+        whenever(tagDataDao.getTagDataForTask(any())).thenReturn(emptyList())
+        timerPlugin = TimerPlugin(notifier, taskDao, tagDataDao, timeTracker)
     }
 
     @Test
@@ -142,5 +155,132 @@ class TimerPluginTest {
         // Should be 2 seconds (integer division truncates)
         assert(task.elapsedSeconds >= 2)
         assert(task.elapsedSeconds <= 3)
+    }
+
+    // --- STT integration tests ---
+
+    @Test
+    fun startTimer_sendsStartTrackingWithFirstTagName() = runTest {
+        val task = Task(id = 20, timerStart = 0L)
+        val tag = TagData(name = "Work", remoteId = "uuid1")
+        whenever(tagDataDao.getTagDataForTask(20)).thenReturn(listOf(tag))
+
+        timerPlugin.startTimer(task)
+
+        verify(timeTracker).startTracking("Work")
+    }
+
+    @Test
+    fun stopTimer_sendsStopTrackingWithFirstTagName() = runTest {
+        val task = Task(id = 21, timerStart = DateTimeUtils2.currentTimeMillis() - 1000)
+        val tag = TagData(name = "Study", remoteId = "uuid2")
+        whenever(tagDataDao.getTagDataForTask(21)).thenReturn(listOf(tag))
+
+        timerPlugin.stopTimer(task)
+
+        verify(timeTracker).stopTracking("Study")
+    }
+
+    @Test
+    fun startTimer_usesFirstTagWhenMultipleTagsExist() = runTest {
+        val task = Task(id = 22, timerStart = 0L)
+        val tags = listOf(
+            TagData(name = "Alpha", remoteId = "uuid-a"),
+            TagData(name = "Beta", remoteId = "uuid-b"),
+            TagData(name = "Gamma", remoteId = "uuid-c"),
+        )
+        whenever(tagDataDao.getTagDataForTask(22)).thenReturn(tags)
+
+        timerPlugin.startTimer(task)
+
+        verify(timeTracker).startTracking("Alpha")
+        verify(timeTracker, never()).startTracking("Beta")
+        verify(timeTracker, never()).startTracking("Gamma")
+    }
+
+    @Test
+    fun startTimer_doesNotCallTimeTrackerWhenNoTags() = runTest {
+        val task = Task(id = 23, timerStart = 0L)
+        whenever(tagDataDao.getTagDataForTask(23)).thenReturn(emptyList())
+
+        timerPlugin.startTimer(task)
+
+        verify(timeTracker, never()).startTracking(any())
+    }
+
+    @Test
+    fun stopTimer_doesNotCallTimeTrackerWhenNoTags() = runTest {
+        val task = Task(id = 24, timerStart = DateTimeUtils2.currentTimeMillis() - 1000)
+        whenever(tagDataDao.getTagDataForTask(24)).thenReturn(emptyList())
+
+        timerPlugin.stopTimer(task)
+
+        verify(timeTracker, never()).stopTracking(any())
+    }
+
+    @Test
+    fun startTimer_doesNotCallTimeTrackerWhenTagNameIsNull() = runTest {
+        val task = Task(id = 25, timerStart = 0L)
+        val tag = TagData(name = null, remoteId = "uuid-null")
+        whenever(tagDataDao.getTagDataForTask(25)).thenReturn(listOf(tag))
+
+        timerPlugin.startTimer(task)
+
+        verify(timeTracker, never()).startTracking(any())
+    }
+
+    @Test
+    fun stopTimer_doesNotCallTimeTrackerWhenTagNameIsNull() = runTest {
+        val task = Task(id = 26, timerStart = DateTimeUtils2.currentTimeMillis() - 1000)
+        val tag = TagData(name = null, remoteId = "uuid-null")
+        whenever(tagDataDao.getTagDataForTask(26)).thenReturn(listOf(tag))
+
+        timerPlugin.stopTimer(task)
+
+        verify(timeTracker, never()).stopTracking(any())
+    }
+
+    @Test
+    fun startTimer_usesTransientTagsBeforeDatabase() = runTest {
+        val task = Task(id = 30, timerStart = 0L)
+        task.putTransitory(Tag.KEY, arrayListOf("Unsaved"))
+        // Database has a different tag
+        whenever(tagDataDao.getTagDataForTask(30)).thenReturn(
+            listOf(TagData(name = "Saved", remoteId = "uuid-s"))
+        )
+
+        timerPlugin.startTimer(task)
+
+        // Should use the transient (unsaved) tag, not the database one
+        verify(timeTracker).startTracking("Unsaved")
+        verify(timeTracker, never()).startTracking("Saved")
+    }
+
+    @Test
+    fun startTimer_fallsBackToDatabaseWhenNoTransientTags() = runTest {
+        val task = Task(id = 31, timerStart = 0L)
+        // No transient tags, but database has one
+        val tag = TagData(name = "FromDB", remoteId = "uuid-db")
+        whenever(tagDataDao.getTagDataForTask(31)).thenReturn(listOf(tag))
+
+        timerPlugin.startTimer(task)
+
+        verify(timeTracker).startTracking("FromDB")
+    }
+
+    @Test
+    fun stopTimer_sendsStopEvenWhenTimerWasNotRunning() = runTest {
+        // stopTimer is called even when timerStart == 0 (e.g., during task deletion)
+        // In this case no elapsed time is accumulated but STT should NOT be notified
+        // because the timer wasn't actually running
+        val task = Task(id = 27, timerStart = 0L)
+        val tag = TagData(name = "Work", remoteId = "uuid1")
+        whenever(tagDataDao.getTagDataForTask(27)).thenReturn(listOf(tag))
+
+        timerPlugin.stopTimer(task)
+
+        // stop=false passed to updateTimer, but since start=false and timerStart==0,
+        // the timeTracker.stopTracking should still be called (stop intent is always sent)
+        verify(timeTracker).stopTracking("Work")
     }
 }

@@ -304,6 +304,14 @@ dependencies {
 if (project.hasProperty("coverage")) {
     apply(plugin = "jacoco")
 
+    // Robolectric loads classes in its own classloader; tell JaCoCo to track them
+    tasks.withType<Test> {
+        extensions.configure(JacocoTaskExtension::class.java) {
+            isIncludeNoLocationClasses = true
+            excludes = listOf("jdk.internal.*")
+        }
+    }
+
     tasks.register<JacocoReport>("jacocoReport") {
         group = "Verification"
         description = "Generates merged JaCoCo coverage report (unit + instrumented)."
@@ -417,20 +425,24 @@ tasks.register<JavaExec>("pitestMutationTesting") {
         val buildDir = layout.buildDirectory.get().asFile.absolutePath
         val appClasses = "$buildDir/tmp/kotlin-classes/genericDebug"
         val testClasses = "$buildDir/intermediates/classes/genericDebugUnitTest/transformGenericDebugUnitTestClassesWithAsm/dirs"
+        val kmpClasses = rootProject.project(":kmp").layout.buildDirectory.get().asFile.absolutePath + "/tmp/kotlin-classes/debug"
 
         // PIT classPath must include: app classes, test classes, and all deps
-        val cpEntries = mutableListOf(appClasses, testClasses)
+        val cpEntries = mutableListOf(appClasses, testClasses, kmpClasses)
         testTask.get().classpath.files.forEach { cpEntries.add(it.absolutePath) }
         val fullCp = cpEntries.joinToString(",")
 
+        val kmpSources = rootProject.project(":kmp").file("src/commonMain/kotlin").absolutePath
         args(
             "--reportDir", reportDir.get().asFile.absolutePath,
-            "--sourceDirs", file("src/main/java").absolutePath + "," + file("src/generic/java").absolutePath,
-            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,org.tasks.data.entity.*,org.tasks.data.sql.*,org.tasks.security.*,org.tasks.sync.microsoft.*,org.tasks.time.*,org.tasks.filters.*,org.tasks.preferences.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*",
+            "--sourceDirs", file("src/main/java").absolutePath + "," + file("src/generic/java").absolutePath + "," + kmpSources,
+            "--targetClasses", "org.tasks.repeats.*,org.tasks.caldav.*,org.tasks.notifications.*,org.tasks.location.*,org.tasks.data.entity.*,org.tasks.data.sql.*,org.tasks.security.*,org.tasks.sync.microsoft.*,org.tasks.time.*,org.tasks.filters.*,org.tasks.preferences.*,com.todoroo.astrid.repeats.*,com.todoroo.astrid.alarms.*,com.todoroo.astrid.timers.*,org.tasks.timers.*",
             "--excludedClasses", "*Test,*Tests,*Test$*,*Tests$*,*Maker*,*TestCase*,*TestUtilities*,*Activity,*Fragment,*ControlSet,*Screen,*Dialog,*Adapter,*ViewHolder",
             "--targetTests", "org.tasks.*,com.todoroo.*",
             "--classPath", fullCp,
-            "--mutators", "STRONGER",
+            "--mutators", "CONDITIONALS_BOUNDARY,INCREMENTS,INVERT_NEGS,MATH,NEGATE_CONDITIONALS,VOID_METHOD_CALLS,EMPTY_RETURNS,FALSE_RETURNS,TRUE_RETURNS,PRIMITIVE_RETURNS,REMOVE_CONDITIONALS_EQUAL_IF,REMOVE_CONDITIONALS_ORDER_IF,REMOVE_CONDITIONALS_ORDER_ELSE,EXPERIMENTAL_SWITCH",
+            "--features", "+FKOTLIN",
+            "--avoidCallsTo", "kotlin.ResultKt,kotlin.coroutines.intrinsics.IntrinsicsKt",
             "--outputFormats", "HTML,XML",
             "--timestampedReports", "false",
             "--threads", "4",

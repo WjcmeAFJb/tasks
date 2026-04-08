@@ -99,7 +99,11 @@ fun TimerRow(
                             Icons.Outlined.PlayArrow
                         },
                         modifier = Modifier.alpha(ContentAlpha.medium),
-                        contentDescription = null,
+                        contentDescription = if (started > 0) {
+                            stringResource(R.string.TEA_timer_stop)
+                        } else {
+                            stringResource(R.string.TEA_timer_start)
+                        },
                         tint = MaterialTheme.colorScheme.onSurface,
                     )
                 }

@@ -19,9 +19,12 @@ import org.tasks.kmp.createDataStore
 import org.tasks.preferences.TasksPreferences
 import org.tasks.security.AndroidKeyStoreEncryption
 import org.tasks.security.KeyStoreEncryption
+import org.tasks.timers.SimpleTimeTrackerIntegration
+import org.tasks.timers.TimeTracker
 
 actual fun platformModule(): Module = module {
     includes(flavorModule)
+    factory<TimeTracker> { SimpleTimeTrackerIntegration(androidContext()) }
     singleOf(::TasksServerEnvironment)
     factory<Reporting> {
         object : Reporting {
