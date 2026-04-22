@@ -1,0 +1,99 @@
+appId: org.tasks
+tags:
+  - smoke
+  - integration
+  - timer
+---
+# End-to-end test: Tasks timer <-> SimpleTimeTracker integration
+# Verifies that starting/stopping a timer in Tasks starts/stops
+# the corresponding activity in SimpleTimeTracker.
+
+# ============================
+# Phase 1: Create "Coding" activity in STT (clean slate)
+# ============================
+- launchApp:
+    appId: com.razeeman.util.simpletimetracker
+    clearState: true
+
+- tapOn: "Add"
+- tapOn: "Enter new name"
+- inputText: "Coding"
+- hideKeyboard
+- tapOn: "SAVE"
+- assertVisible: "Coding"
+- takeScreenshot: screenshots/09_stt_activity_created
+
+# ============================
+# Phase 2: Create task with "Coding" tag in Tasks (clean slate)
+# ============================
+- launchApp:
+    appId: org.tasks
+    clearState: true
+- tapOn: "Continue without sync"
+
+- tapOn:
+    id: "org.tasks:id/fab"
+- tapOn: "Task name"
+- inputText: "Timer integration test"
+- tapOn: "Save"
+- assertVisible: "Timer integration test"
+
+# Open task, add tag, save
+- tapOn: "Timer integration test"
+- tapOn: "Add tags"
+- tapOn: "Enter tag name"
+- inputText: "Coding"
+- tapOn:
+    text: ".*Create new tag.*"
+- hideKeyboard
+- tapOn:
+    point: "5%,4%"
+- assertVisible: "Coding"
+- tapOn: "Save"
+
+- takeScreenshot: screenshots/09_tasks_tag_added
+
+# ============================
+# Phase 3: Start timer — verify STT starts tracking
+# ============================
+# Re-open the task (tag is now persisted)
+- tapOn: "Timer integration test"
+- scrollUntilVisible:
+    element:
+      text: "Timer"
+    direction: DOWN
+- tapOn:
+    text: "Start timer"
+- takeScreenshot: screenshots/09_tasks_timer_started
+
+# Switch to STT and verify "Coding" is actively running
+- launchApp:
+    appId: com.razeeman.util.simpletimetracker
+- assertVisible: "Coding"
+# Running record shows elapsed time like "1s" at the top
+- assertVisible:
+    text: ".*\\d+s.*"
+- takeScreenshot: screenshots/09_stt_activity_running
+
+# ============================
+# Phase 4: Stop timer — verify STT stops tracking
+# ============================
+- launchApp:
+    appId: org.tasks
+- tapOn: "Timer integration test"
+- scrollUntilVisible:
+    element:
+      text: ".*Elapsed.*"
+    direction: DOWN
+- tapOn:
+    text: "Stop timer"
+- takeScreenshot: screenshots/09_tasks_timer_stopped
+
+# Switch to STT and verify running record is gone
+- launchApp:
+    appId: com.razeeman.util.simpletimetracker
+# No running time counter should be visible
+- assertNotVisible:
+    text: ".*\\d+s.*"
+- assertVisible: "Coding"
+- takeScreenshot: screenshots/09_stt_activity_stopped
